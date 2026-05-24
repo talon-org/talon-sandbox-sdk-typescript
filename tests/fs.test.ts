@@ -167,3 +167,24 @@ describe("Fs.remove", () => {
     expect(deleteFn).toHaveBeenCalledWith("/v1/sandboxes/sb_1/fs/workspace/old");
   });
 });
+
+describe("Fs.write — sliced Uint8Array (C1 regression)", () => {
+  it("uploads only the view, not the entire backing buffer", async () => {
+    const putFn = vi.fn().mockResolvedValue({ status: 204 });
+    const client = mockClient({ put: putFn });
+    const fs = new Fs("sb_1", client);
+
+    // Build a 10-byte backing buffer, take a 5-byte slice in the middle.
+    // Naive `content.buffer` would upload all 10 bytes including the
+    // garbage outside the view.
+    const backing = new Uint8Array([0xff, 0xff, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0xff, 0xff, 0xff]);
+    const view = backing.subarray(2, 7); // "hello"
+
+    await fs.write("/workspace/hello.txt", view);
+
+    expect(putFn).toHaveBeenCalledTimes(1);
+    const body = putFn.mock.calls[0]![1].body as ArrayBuffer;
+    expect(body.byteLength).toBe(5);
+    expect(new TextDecoder().decode(body)).toBe("hello");
+  });
+});

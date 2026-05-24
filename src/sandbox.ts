@@ -21,7 +21,7 @@
 import { Client, type ClientOptions } from "./client.js";
 import { getDefaultClient } from "./config.js";
 import { parseSize, parseDuration } from "./parse.js";
-import { NotImplementedError } from "./errors.js";
+import { NotImplementedError, TimeoutError } from "./errors.js";
 import { Fs } from "./fs.js";
 import { Env } from "./env.js";
 import { Terminal } from "./terminal.js";
@@ -228,12 +228,32 @@ export class Sandbox {
     if (wait && info.state !== "running") {
       const timeoutMs = opts.waitTimeoutMs ?? 60_000;
       const intervalMs = opts.pollIntervalMs ?? 500;
-      const deadline = Date.now() + timeoutMs;
+      const start = Date.now();
+      const deadline = start + timeoutMs;
 
       while (info.state !== "running" && Date.now() < deadline) {
+        // Terminal states never recover to running — bail out early.
+        if (
+          info.state === "stopped" ||
+          info.state === "killed" ||
+          info.state === "destroyed" ||
+          info.state === "lost"
+        ) {
+          throw new TimeoutError(
+            `Sandbox ${info.id} entered terminal state '${info.state}' while waiting for running`,
+            { state: info.state, elapsed: Date.now() - start },
+          );
+        }
         await new Promise<void>((r) => setTimeout(r, intervalMs));
         const pollRes = await client.get(`/v1/sandboxes/${info.id}`);
         info = sandboxInfoFromRaw(pollRes.json<RawSandbox>());
+      }
+
+      if (info.state !== "running") {
+        throw new TimeoutError(
+          `Sandbox ${info.id} did not reach 'running' within ${timeoutMs}ms (last state: '${info.state}')`,
+          { state: info.state, elapsed: Date.now() - start },
+        );
       }
     }
 

@@ -22,20 +22,25 @@
     }
   },
   "files": ["dist", "README.md", "LICENSE"],
+  "sideEffects": false,
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "ws": "^8.18.1"
+  "peerDependencies": {
+    "ws": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ws": { "optional": true }
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/ws": "^8.5.13",
     "tsup": "^8.3.5",
     "typescript": "^5.7.0",
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "ws": "^8.18.1"
   }
 }

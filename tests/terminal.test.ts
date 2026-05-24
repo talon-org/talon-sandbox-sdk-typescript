@@ -4,8 +4,11 @@ import { EventEmitter as NodeEE } from "events";
 
 function makeFakeWs() {
   const ee = new NodeEE();
+  // PtySession.write/resize call ws.send(data) without a callback now to
+  // stay compatible with both Node `ws` (which accepts an optional callback)
+  // and browser/Node 22+ native WebSocket (no callback support).
   const ws = Object.assign(ee, {
-    send: vi.fn((data: Buffer, cb: (err?: Error) => void) => cb()),
+    send: vi.fn((_data: unknown) => undefined),
     close: vi.fn(() => {
       ee.emit("close", 0);
     }),
@@ -22,8 +25,14 @@ describe("PtySession", () => {
     session.on("data", (chunk) => received.push(chunk));
 
     ws.emit("message", Buffer.from("hello"));
-    expect(received).toHaveLength(1);
-    expect(new TextDecoder().decode(received[0]!)).toBe("hello");
+    // toUint8Array is async — give the microtask queue a tick.
+    return new Promise<void>((resolve) =>
+      setTimeout(() => {
+        expect(received).toHaveLength(1);
+        expect(new TextDecoder().decode(received[0]!)).toBe("hello");
+        resolve();
+      }, 0),
+    );
   });
 
   it("emits data when ws receives ArrayBuffer message", () => {
@@ -34,14 +43,21 @@ describe("PtySession", () => {
 
     const ab = new TextEncoder().encode("world").buffer as ArrayBuffer;
     ws.emit("message", ab);
-    expect(new TextDecoder().decode(received[0]!)).toBe("world");
+    return new Promise<void>((resolve) =>
+      setTimeout(() => {
+        expect(new TextDecoder().decode(received[0]!)).toBe("world");
+        resolve();
+      }, 0),
+    );
   });
 
-  it("write sends Buffer to ws.send", async () => {
+  it("write sends payload bytes to ws.send", async () => {
     const ws = makeFakeWs();
     const session = new PtySession(ws as never);
     await session.write("ls\n");
-    expect(ws.send).toHaveBeenCalledWith(Buffer.from("ls\n"), expect.any(Function));
+    expect(ws.send).toHaveBeenCalledTimes(1);
+    const arg = (ws.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as Uint8Array;
+    expect(new TextDecoder().decode(arg)).toBe("ls\n");
   });
 
   it("write accepts Uint8Array", async () => {
@@ -50,14 +66,16 @@ describe("PtySession", () => {
     const data = new Uint8Array([0x03]); // Ctrl-C
     await session.write(data);
     expect(ws.send).toHaveBeenCalled();
+    const arg = (ws.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as Uint8Array;
+    expect(arg).toEqual(data);
   });
 
   it("resize sends JSON frame with type/cols/rows", async () => {
     const ws = makeFakeWs();
     const session = new PtySession(ws as never);
     await session.resize({ rows: 40, cols: 120 });
-    const sent = (ws.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as Buffer;
-    expect(JSON.parse(sent.toString())).toEqual({ type: "resize", cols: 120, rows: 40 });
+    const sent = (ws.send as ReturnType<typeof vi.fn>).mock.calls[0]![0] as string;
+    expect(JSON.parse(sent)).toEqual({ type: "resize", cols: 120, rows: 40 });
   });
 
   it("close sets closed=true", async () => {

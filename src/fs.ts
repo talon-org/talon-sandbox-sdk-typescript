@@ -49,8 +49,19 @@ export class Fs {
    * Write bytes to a file. Parent directories are created automatically.
    */
   async write(path: string, content: Uint8Array): Promise<void> {
+    // Take the exact view, not the entire backing ArrayBuffer. `content`
+    // may be a slice (e.g. Buffer.subarray() in Node) — `content.buffer`
+    // would include bytes outside the view and we'd upload garbage.
+    //
+    // We slice into a fresh ArrayBuffer to satisfy DOM's BodyInit type
+    // (which doesn't include Uint8Array in lib.dom) while keeping the
+    // correct bytes.
+    const exact = (content.buffer as ArrayBuffer).slice(
+      content.byteOffset,
+      content.byteOffset + content.byteLength,
+    );
     await this.client.put(this.fsPath(path), {
-      body: content.buffer as ArrayBuffer,
+      body: exact,
       headers: { "Content-Type": "application/octet-stream" },
     });
   }

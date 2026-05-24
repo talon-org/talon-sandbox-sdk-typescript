@@ -230,3 +230,61 @@ describe("Sandbox asyncDispose", () => {
     expect(client.delete).toHaveBeenCalledWith("/v1/sandboxes/sb_abc");
   });
 });
+
+describe("Sandbox.create wait timeout (C2 regression)", () => {
+  it("throws TimeoutError when sandbox never reaches running within deadline", async () => {
+    const pendingRaw = { ...rawSandbox, state: "created" };
+    const client = mockClient({
+      post: vi.fn().mockResolvedValue(makeResponse(pendingRaw, 201)),
+      get: vi.fn().mockResolvedValue(makeResponse(pendingRaw)),
+    });
+    setDefaultClient(client);
+    await expect(
+      Sandbox.create({
+        image: "node:20-bookworm",
+        wait: true,
+        waitTimeoutMs: 50,
+        pollIntervalMs: 10,
+      }),
+    ).rejects.toThrow(/did not reach 'running'/);
+  });
+
+  it("throws TimeoutError when sandbox enters terminal state mid-wait", async () => {
+    const created = { ...rawSandbox, state: "created" };
+    const stopped = { ...rawSandbox, state: "stopped" };
+    const client = mockClient({
+      post: vi.fn().mockResolvedValue(makeResponse(created, 201)),
+      get: vi
+        .fn()
+        .mockResolvedValueOnce(makeResponse(stopped))
+        .mockResolvedValue(makeResponse(stopped)),
+    });
+    setDefaultClient(client);
+    await expect(
+      Sandbox.create({
+        wait: true,
+        waitTimeoutMs: 5_000,
+        pollIntervalMs: 5,
+      }),
+    ).rejects.toThrow(/terminal state 'stopped'/);
+  });
+
+  it("succeeds when sandbox transitions to running", async () => {
+    const created = { ...rawSandbox, state: "created" };
+    const running = { ...rawSandbox, state: "running" };
+    const client = mockClient({
+      post: vi.fn().mockResolvedValue(makeResponse(created, 201)),
+      get: vi
+        .fn()
+        .mockResolvedValueOnce(makeResponse(created))
+        .mockResolvedValue(makeResponse(running)),
+    });
+    setDefaultClient(client);
+    const sb = await Sandbox.create({
+      wait: true,
+      waitTimeoutMs: 5_000,
+      pollIntervalMs: 5,
+    });
+    expect(sb.state).toBe("running");
+  });
+});
