@@ -148,10 +148,12 @@ export class Client {
 
     if (resp.status >= 400) {
       const retryAfterHdr = resp.headers.get("Retry-After");
-      const retryAfter =
-        retryAfterHdr !== null ? parseInt(retryAfterHdr, 10) : undefined;
-      const requestId = resp.headers.get("X-Request-Id") ?? undefined;
-      throw mapHttpError(resp.status, textBody, { retryAfter, requestId });
+      const retryAfterHdrVal = retryAfterHdr !== null ? parseInt(retryAfterHdr, 10) : undefined;
+      const requestIdVal = resp.headers.get("X-Request-Id") ?? undefined;
+      const errOpts: { retryAfter?: number; requestId?: string } = {};
+      if (retryAfterHdrVal !== undefined) errOpts.retryAfter = retryAfterHdrVal;
+      if (requestIdVal !== undefined) errOpts.requestId = requestIdVal;
+      throw mapHttpError(resp.status, textBody, errOpts);
     }
 
     return {

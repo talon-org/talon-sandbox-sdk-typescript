@@ -153,7 +153,7 @@ describe("Fs.list", () => {
     await fs.list("/workspace");
     expect(getFn).toHaveBeenCalledWith(
       "/v1/sandboxes/sb_1/fs-list/workspace",
-      expect.anything(),
+      undefined,
     );
   });
 });

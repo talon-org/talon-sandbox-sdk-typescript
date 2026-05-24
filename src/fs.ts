@@ -73,9 +73,11 @@ export class Fs {
     if (opts.offset !== undefined) params["offset"] = opts.offset;
     if (opts.limit !== undefined) params["limit"] = opts.limit;
 
-    const res = await this.client.get(this.fsListPath(path), {
-      params: Object.keys(params).length ? params : undefined,
-    });
+    const hasParams = Object.keys(params).length > 0;
+    const res = await this.client.get(
+      this.fsListPath(path),
+      hasParams ? { params } : undefined,
+    );
     const data = res.json<{ entries: RawFSEntry[]; total: number }>();
     return (data.entries ?? []).map(fsEntryFromRaw);
   }

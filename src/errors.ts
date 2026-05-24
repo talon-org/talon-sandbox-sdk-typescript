@@ -10,6 +10,11 @@
  *   network  → NetworkError
  */
 
+export interface SandboxErrorOpts {
+  statusCode?: number;
+  requestId?: string;
+}
+
 /** Base class for all talon-sandbox SDK errors. */
 export class SandboxError extends Error {
   /** HTTP status code if the error originated from an HTTP response. */
@@ -17,10 +22,7 @@ export class SandboxError extends Error {
   /** Server-side request ID for audit log correlation. */
   readonly requestId: string | undefined;
 
-  constructor(
-    message: string,
-    opts?: { statusCode?: number; requestId?: string },
-  ) {
+  constructor(message: string, opts?: SandboxErrorOpts) {
     super(message);
     this.name = this.constructor.name;
     this.statusCode = opts?.statusCode;
@@ -38,17 +40,28 @@ export class NotFoundError extends SandboxError {}
 /** 422 — tenant sandbox quota exceeded. */
 export class QuotaError extends SandboxError {}
 
+export interface RateLimitErrorOpts {
+  retryAfter?: number;
+  requestId?: string;
+}
+
 /** 429 — rate limit exceeded. */
 export class RateLimitError extends SandboxError {
   readonly retryAfter: number | undefined;
 
-  constructor(
-    message: string,
-    opts?: { retryAfter?: number; requestId?: string },
-  ) {
-    super(message, { statusCode: 429, requestId: opts?.requestId });
+  constructor(message: string, opts?: RateLimitErrorOpts) {
+    super(message, { statusCode: 429 });
+    if (opts?.requestId !== undefined) {
+      (this as { requestId: string | undefined }).requestId = opts.requestId;
+    }
     this.retryAfter = opts?.retryAfter;
   }
+}
+
+export interface TimeoutErrorOpts {
+  state?: string;
+  elapsed?: number;
+  requestId?: string;
 }
 
 /** Sandbox stuck in unexpected state past a wait deadline. */
@@ -56,11 +69,11 @@ export class TimeoutError extends SandboxError {
   readonly state: string | undefined;
   readonly elapsed: number | undefined;
 
-  constructor(
-    message: string,
-    opts?: { state?: string; elapsed?: number; requestId?: string },
-  ) {
-    super(message, { requestId: opts?.requestId });
+  constructor(message: string, opts?: TimeoutErrorOpts) {
+    super(message);
+    if (opts?.requestId !== undefined) {
+      (this as { requestId: string | undefined }).requestId = opts.requestId;
+    }
     this.state = opts?.state;
     this.elapsed = opts?.elapsed;
   }
@@ -95,21 +108,20 @@ export function mapHttpError(
   opts?: { retryAfter?: number; requestId?: string },
 ): SandboxError {
   const message = extractMessage(body);
+  const errOpts: SandboxErrorOpts = { statusCode: status };
+  if (opts?.requestId !== undefined) errOpts.requestId = opts.requestId;
 
-  if (status === 401 || status === 403)
-    return new AuthError(message, { statusCode: status, requestId: opts?.requestId });
-  if (status === 404)
-    return new NotFoundError(message, { statusCode: 404, requestId: opts?.requestId });
-  if (status === 422)
-    return new QuotaError(message, { statusCode: 422, requestId: opts?.requestId });
-  if (status === 429)
-    return new RateLimitError(message, {
-      retryAfter: opts?.retryAfter,
-      requestId: opts?.requestId,
-    });
-  if (status >= 500)
-    return new ServerError(message, { statusCode: status, requestId: opts?.requestId });
-  return new ClientError(message, { statusCode: status, requestId: opts?.requestId });
+  if (status === 401 || status === 403) return new AuthError(message, errOpts);
+  if (status === 404) return new NotFoundError(message, { statusCode: 404, ...errOpts });
+  if (status === 422) return new QuotaError(message, { statusCode: 422, ...errOpts });
+  if (status === 429) {
+    const rlOpts: RateLimitErrorOpts = {};
+    if (opts?.retryAfter !== undefined) rlOpts.retryAfter = opts.retryAfter;
+    if (opts?.requestId !== undefined) rlOpts.requestId = opts.requestId;
+    return new RateLimitError(message, rlOpts);
+  }
+  if (status >= 500) return new ServerError(message, errOpts);
+  return new ClientError(message, errOpts);
 }
 
 function extractMessage(body: string): string {

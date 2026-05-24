@@ -132,11 +132,14 @@ export function fsEntryFromRaw(r: RawFSEntry): FsEntry {
 }
 
 export function exposedPortFromRaw(r: RawExposedPort): ExposedPort {
-  return {
+  const entry: ExposedPort = {
     port: r.port,
     url: r.url,
     signed: r.signed,
     expiresAt: r.expires_at ? new Date(r.expires_at) : null,
-    source: r.source as "explicit" | "dynamic" | undefined,
   };
+  if (r.source !== undefined) {
+    entry.source = r.source as "explicit" | "dynamic";
+  }
+  return entry;
 }
