@@ -483,7 +483,7 @@ export class Sandbox {
   async agentRun(goal: string, opts: AgentRunOptions = {}): Promise<AgentRunResult> {
     const body: Record<string, unknown> = { goal };
     if (opts.maxSteps !== undefined) body["max_steps"] = opts.maxSteps;
-    if (opts.llmModel) body["llm_model"] = opts.llmModel;
+    if (opts.llmModel !== undefined) body["llm_model"] = opts.llmModel;
 
     const res = await this._client.post(
       `/v1/sandboxes/${this.id}/agent/run`,

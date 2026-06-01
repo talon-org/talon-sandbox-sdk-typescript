@@ -57,7 +57,8 @@ export class Env {
 
   /**
    * 删除一个环境变量（DELETE .../env/{key}）。
-   * 删除不存在的 key 时服务端视为幂等（不报错）。
+   * 注意：后端 router 目前没有 /env 路由，与 get/set/all 同属前瞻实现，
+   * 在服务端实现该端点前调用会返回 404。
    */
   async unset(key: string): Promise<void> {
     await this.client.delete(
