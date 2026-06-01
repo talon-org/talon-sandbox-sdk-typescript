@@ -219,6 +219,24 @@ describe("Sandbox lifecycle", () => {
     expect(client.delete).toHaveBeenCalledWith("/v1/sandboxes/sb_abc");
     expect(sb.state).toBe("killed");
   });
+
+  it("start posts to /start and updates state to running", async () => {
+    const client = mockClient();
+    setDefaultClient(client);
+    const sb = await Sandbox.create({ wait: false });
+    await sb.start();
+    expect(client.post).toHaveBeenCalledWith("/v1/sandboxes/sb_abc/start");
+    expect(sb.state).toBe("running");
+  });
+
+  it("stop posts to /stop and updates state to stopped", async () => {
+    const client = mockClient();
+    setDefaultClient(client);
+    const sb = await Sandbox.create({ wait: false });
+    await sb.stop();
+    expect(client.post).toHaveBeenCalledWith("/v1/sandboxes/sb_abc/stop");
+    expect(sb.state).toBe("stopped");
+  });
 });
 
 describe("Sandbox asyncDispose", () => {

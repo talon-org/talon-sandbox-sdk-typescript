@@ -57,6 +57,53 @@ export interface BrowserSession {
   profileDir?: string;
 }
 
+// ── Images ────────────────────────────────────────────────────────────────────
+
+/** 单个 base image 的信息（GET /v1/images 响应中的元素）。 */
+export interface ImageInfo {
+  id: string;
+  name: string;
+  url: string;
+  sha256: string;
+  os: string;
+  arch: string;
+  /** "builtin" | "admin" */
+  source: string;
+  isDefault: boolean;
+  description: string;
+  createdAt: Date;
+}
+
+// ── Agent Run ─────────────────────────────────────────────────────────────────
+
+/** agentRun 的单步记录（对应后端 AgentRunStep）。 */
+export interface AgentRunStep {
+  step: number;
+  action: string;
+  thought?: string;
+  details?: Record<string, unknown>;
+}
+
+/** agentRun 的选项（POST /v1/sandboxes/{id}/agent/run 请求体）。 */
+export interface AgentRunOptions {
+  /** 最大步骤数（默认 20，后端硬上限 100）。 */
+  maxSteps?: number;
+  /** LLM 模型 hint，例如 "anthropic:claude-sonnet-4-6"。 */
+  llmModel?: string;
+}
+
+/** agentRun 的响应（对应后端 AgentRunResponse）。 */
+export interface AgentRunResult {
+  runId: string;
+  /** "completed" | "failed" | "timeout" */
+  status: string;
+  durationMs: number;
+  steps: AgentRunStep[];
+  result?: string;
+  exitCode: number;
+  stderr?: string;
+}
+
 // ── Raw DTO shapes (snake_case from server) ──────────────────────────────────
 
 export interface RawSandbox {
@@ -105,6 +152,39 @@ export interface RawExposedPort {
   source?: string;
 }
 
+/** 后端 ImageDTO（snake_case）。 */
+export interface RawImage {
+  id: string;
+  name: string;
+  url: string;
+  sha256: string;
+  os: string;
+  arch: string;
+  source: string;
+  is_default: boolean;
+  description?: string;
+  created_at: number;
+}
+
+/** 后端 AgentRunStep（snake_case）。 */
+export interface RawAgentRunStep {
+  step: number;
+  action: string;
+  thought?: string;
+  details?: Record<string, unknown>;
+}
+
+/** 后端 AgentRunResponse（snake_case）。 */
+export interface RawAgentRunResponse {
+  run_id: string;
+  status: string;
+  duration_ms: number;
+  steps: RawAgentRunStep[];
+  result?: string;
+  exit_code: number;
+  stderr?: string;
+}
+
 // ── Mappers ──────────────────────────────────────────────────────────────────
 
 export function sandboxInfoFromRaw(r: RawSandbox): SandboxInfo {
@@ -129,6 +209,40 @@ export function fsEntryFromRaw(r: RawFSEntry): FsEntry {
     size: r.size ?? 0,
     modified: r.mod_time ? new Date(r.mod_time * 1000) : new Date(0),
   };
+}
+
+export function imageInfoFromRaw(r: RawImage): ImageInfo {
+  return {
+    id: r.id,
+    name: r.name,
+    url: r.url,
+    sha256: r.sha256,
+    os: r.os,
+    arch: r.arch,
+    source: r.source,
+    isDefault: r.is_default,
+    description: r.description ?? "",
+    createdAt: r.created_at ? new Date(r.created_at * 1000) : new Date(0),
+  };
+}
+
+export function agentRunResultFromRaw(r: RawAgentRunResponse): AgentRunResult {
+  const steps: AgentRunStep[] = (r.steps ?? []).map((s) => {
+    const step: AgentRunStep = { step: s.step, action: s.action };
+    if (s.thought !== undefined) step.thought = s.thought;
+    if (s.details !== undefined) step.details = s.details;
+    return step;
+  });
+  const res: AgentRunResult = {
+    runId: r.run_id,
+    status: r.status,
+    durationMs: r.duration_ms,
+    steps,
+    exitCode: r.exit_code,
+  };
+  if (r.result !== undefined) res.result = r.result;
+  if (r.stderr !== undefined) res.stderr = r.stderr;
+  return res;
 }
 
 export function exposedPortFromRaw(r: RawExposedPort): ExposedPort {

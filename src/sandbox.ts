@@ -36,14 +36,18 @@ import {
 import {
   sandboxInfoFromRaw,
   exposedPortFromRaw,
+  agentRunResultFromRaw,
   type SandboxInfo,
   type RawSandbox,
   type RawExposedPort,
   type ExposedPort,
   type ProcessResult,
+  type AgentRunOptions,
+  type AgentRunResult,
+  type RawAgentRunResponse,
 } from "./types.js";
 
-export type { SandboxInfo, ExposedPort, ProcessResult };
+export type { SandboxInfo, ExposedPort, ProcessResult, AgentRunOptions, AgentRunResult };
 export type { RunOptions, SpawnOptions };
 export { SpawnedProcess };
 
@@ -315,6 +319,24 @@ export class Sandbox {
     this._info = { ...this._info, state: "running" };
   }
 
+  /**
+   * 从 stopped 状态重新拉起 sandbox（POST .../start，返回 204）。
+   * 与 resume 不同：start 针对 stopped sandbox，resume 针对 paused sandbox。
+   */
+  async start(): Promise<void> {
+    await this._client.post(`/v1/sandboxes/${this.id}/start`);
+    this._info = { ...this._info, state: "running" };
+  }
+
+  /**
+   * 停止 running sandbox（POST .../stop，返回 204）。
+   * 与 pause 不同：stop 是完全停止（进程退出），pause 是冻结（SIGSTOP）。
+   */
+  async stop(): Promise<void> {
+    await this._client.post(`/v1/sandboxes/${this.id}/stop`);
+    this._info = { ...this._info, state: "stopped" };
+  }
+
   /** Destroy the sandbox (irreversible). */
   async kill(): Promise<void> {
     await this._client.delete(`/v1/sandboxes/${this.id}`);
@@ -446,6 +468,28 @@ export class Sandbox {
       state: p.state ?? "unknown",
       command: p.command ?? [],
     }));
+  }
+
+  // ── Agent Run ─────────────────────────────────────────────────────────────
+
+  /**
+   * 在 sandbox 内运行高层 agent（POST .../agent/run，同步阻塞，最长 5 分钟）。
+   * agent 会控制 sandbox 内的 browser-harness 完成 goal，返回步骤日志与结果。
+   *
+   * @example
+   * const result = await sb.agentRun("Search for cats and return page title");
+   * console.log(result.status, result.result);
+   */
+  async agentRun(goal: string, opts: AgentRunOptions = {}): Promise<AgentRunResult> {
+    const body: Record<string, unknown> = { goal };
+    if (opts.maxSteps !== undefined) body["max_steps"] = opts.maxSteps;
+    if (opts.llmModel) body["llm_model"] = opts.llmModel;
+
+    const res = await this._client.post(
+      `/v1/sandboxes/${this.id}/agent/run`,
+      { json: body },
+    );
+    return agentRunResultFromRaw(res.json<RawAgentRunResponse>());
   }
 
   // ── Async dispose (TS 5.2+ `await using`) ─────────────────────────────────

@@ -80,3 +80,21 @@ describe("Env.all", () => {
     expect(all["PORT"]).toBe("3000");
   });
 });
+
+describe("Env.unset", () => {
+  it("DELETE /env/{key} 调用正确路径", async () => {
+    const deleteFn = vi.fn().mockResolvedValue({ status: 204 });
+    const client = mockClient({ delete: deleteFn });
+    const env = new Env("sb_1", client);
+    await env.unset("MY_VAR");
+    expect(deleteFn).toHaveBeenCalledWith("/v1/sandboxes/sb_1/env/MY_VAR");
+  });
+
+  it("URL-encodes key with special chars", async () => {
+    const deleteFn = vi.fn().mockResolvedValue({ status: 204 });
+    const client = mockClient({ delete: deleteFn });
+    const env = new Env("sb_1", client);
+    await env.unset("MY VAR");
+    expect(deleteFn).toHaveBeenCalledWith("/v1/sandboxes/sb_1/env/MY%20VAR");
+  });
+});

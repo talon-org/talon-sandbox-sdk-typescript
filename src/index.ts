@@ -40,6 +40,8 @@ export type {
   ListOptions,
   RunOptions,
   SpawnOptions,
+  AgentRunOptions,
+  AgentRunResult,
 } from "./sandbox.js";
 export { SpawnedProcess } from "./sandbox.js";
 
@@ -48,6 +50,10 @@ export { Fs } from "./fs.js";
 export type { FsEntry } from "./fs.js";
 
 export { Env } from "./env.js";
+
+// ── Images ────────────────────────────────────────────────────────────────────
+export { listImages } from "./images.js";
+export type { ImageInfo } from "./images.js";
 
 export { Terminal, PtySession } from "./terminal.js";
 export type { TerminalOpenOptions, PtyResizeOptions } from "./terminal.js";
@@ -63,6 +69,7 @@ export type {
   NetworkInput,
   NetworkPolicy,
   NetworkAlias,
+  AgentRunStep,
 } from "./types.js";
 
 // ── Client / Config ───────────────────────────────────────────────────────────

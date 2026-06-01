@@ -1,12 +1,13 @@
 /**
  * Environment variable management for a sandbox.
  *
- * GET  /v1/sandboxes/{id}/env       — list all
- * GET  /v1/sandboxes/{id}/env/{key} — get one
- * PUT  /v1/sandboxes/{id}/env/{key} — set one
+ * GET    /v1/sandboxes/{id}/env       — list all
+ * GET    /v1/sandboxes/{id}/env/{key} — get one
+ * PUT    /v1/sandboxes/{id}/env/{key} — set one
+ * DELETE /v1/sandboxes/{id}/env/{key} — unset one
  *
- * Note: these endpoints are planned (Spec 50) but not yet in the current
- * OpenAPI. They will 404 until the server implements them.
+ * Note: these endpoints are planned but not yet in the current backend router.
+ * They will 404 until the server implements them.
  */
 
 import type { Client } from "./client.js";
@@ -52,5 +53,15 @@ export class Env {
     const res = await this.client.get(`/v1/sandboxes/${this.sandboxId}/env`);
     const data = res.json<{ env: Record<string, string> }>();
     return data.env ?? {};
+  }
+
+  /**
+   * 删除一个环境变量（DELETE .../env/{key}）。
+   * 删除不存在的 key 时服务端视为幂等（不报错）。
+   */
+  async unset(key: string): Promise<void> {
+    await this.client.delete(
+      `/v1/sandboxes/${this.sandboxId}/env/${encodeURIComponent(key)}`,
+    );
   }
 }

@@ -116,4 +116,42 @@ describe("spawnProcess", () => {
     proc.emit("stdout", "test line");
     expect(lines).toEqual(["test line"]);
   });
+
+  it("passes expose_ports to request body when exposePorts is set", async () => {
+    const postFn = vi.fn().mockResolvedValue(
+      makeResponse({ id: "proc_6", state: "running" }, 201),
+    );
+    const client = {
+      baseUrl: "http://localhost:18080",
+      authHeader: vi.fn(),
+      post: postFn,
+      get: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+      request: vi.fn(),
+      wsUrl: vi.fn(),
+    } as unknown as Client;
+    await spawnProcess(client, "sb_1", "npm run dev", { exposePorts: [5173, 3000] });
+    const body = (postFn.mock.calls[0] as [string, { json: Record<string, unknown> }])[1].json;
+    expect(body["expose_ports"]).toEqual([5173, 3000]);
+  });
+
+  it("omits expose_ports from body when exposePorts is not set", async () => {
+    const postFn = vi.fn().mockResolvedValue(
+      makeResponse({ id: "proc_7", state: "running" }, 201),
+    );
+    const client = {
+      baseUrl: "http://localhost:18080",
+      authHeader: vi.fn(),
+      post: postFn,
+      get: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+      request: vi.fn(),
+      wsUrl: vi.fn(),
+    } as unknown as Client;
+    await spawnProcess(client, "sb_1", "npm run dev");
+    const body = (postFn.mock.calls[0] as [string, { json: Record<string, unknown> }])[1].json;
+    expect(body["expose_ports"]).toBeUndefined();
+  });
 });

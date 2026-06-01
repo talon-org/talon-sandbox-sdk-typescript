@@ -65,6 +65,11 @@ export interface RunOptions {
 export interface SpawnOptions {
   cwd?: string;
   env?: Record<string, string>;
+  /**
+   * 进程声明对外暴露的容器端口,如 [5173]。
+   * 预览反代准入及 runc DNAT 路由依赖此字段;不填则无法被预览反代访问。
+   */
+  exposePorts?: number[];
 }
 
 /**
@@ -219,6 +224,7 @@ export async function spawnProcess(
   const body: Record<string, unknown> = { command: argv };
   if (envArr?.length) body["env"] = envArr;
   if (opts.cwd) body["cwd"] = opts.cwd;
+  if (opts.exposePorts?.length) body["expose_ports"] = opts.exposePorts;
 
   const res = await client.post(`/v1/sandboxes/${sandboxId}/processes`, {
     json: body,
