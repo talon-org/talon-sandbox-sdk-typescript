@@ -3,7 +3,11 @@
  *
  * Demonstrates: spawn(), expose(), on("stdout"), await using.
  *
- * Run:
+ * Run（托管端点，配 API key 即可）:
+ *   TALON_SANDBOX_API_KEY=ask_... \
+ *   npx tsx examples/vibe-coding.ts
+ *
+ * 自部署覆盖 server:
  *   TALON_SANDBOX_SERVER=http://localhost:18080 \
  *   TALON_SANDBOX_API_KEY=ask_... \
  *   npx tsx examples/vibe-coding.ts

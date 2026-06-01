@@ -93,7 +93,7 @@ await sb.kill();
 
 | Variable | Description | Default |
 |---|---|---|
-| `TALON_SANDBOX_SERVER` | API server base URL | `http://localhost:18080` |
+| `TALON_SANDBOX_SERVER` | API server base URL | `https://api.sandbox.talon.net.cn` |
 | `TALON_SANDBOX_API_KEY` | API key (`ask_…` prefix) | — |
 
 ## Explicit configuration

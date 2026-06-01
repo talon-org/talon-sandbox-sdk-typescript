@@ -9,10 +9,13 @@
 
 import { mapHttpError, NetworkError } from "./errors.js";
 
-const DEFAULT_BASE_URL = "http://localhost:18080";
+/** 官方托管端点。配置 API key 后即可直接使用，无需显式指定 server。
+ * 自部署场景可通过 TALON_SANDBOX_SERVER 环境变量或 ClientOptions.server 参数覆盖。 */
+const DEFAULT_BASE_URL = "https://api.sandbox.talon.net.cn";
 
 export interface ClientOptions {
-  /** Server base URL. Default: TALON_SANDBOX_SERVER env var or http://localhost:18080 */
+  /** Server 基础 URL。优先级：显式参数 > TALON_SANDBOX_SERVER 环境变量 > 官方托管端点 https://api.sandbox.talon.net.cn。
+   * 自部署用户可设置此字段或 TALON_SANDBOX_SERVER 环境变量覆盖默认值。 */
   server?: string;
   /** API key (ask_… prefix). Default: TALON_SANDBOX_API_KEY env var. */
   apiKey?: string;

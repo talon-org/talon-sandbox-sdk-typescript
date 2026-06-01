@@ -4,7 +4,11 @@
  * Shows how to open a terminal session and stream data chunks.
  * Replace `llm.feed(chunk)` with your actual LLM integration.
  *
- * Run:
+ * Run（托管端点，配 API key 即可）:
+ *   TALON_SANDBOX_API_KEY=ask_... \
+ *   npx tsx examples/llm-pty-loop.ts
+ *
+ * 自部署覆盖 server:
  *   TALON_SANDBOX_SERVER=http://localhost:18080 \
  *   TALON_SANDBOX_API_KEY=ask_... \
  *   npx tsx examples/llm-pty-loop.ts
