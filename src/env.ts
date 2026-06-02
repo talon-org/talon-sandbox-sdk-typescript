@@ -1,13 +1,13 @@
 /**
  * Environment variable management for a sandbox.
  *
- * GET    /v1/sandboxes/{id}/env       — list all
- * GET    /v1/sandboxes/{id}/env/{key} — get one
- * PUT    /v1/sandboxes/{id}/env/{key} — set one
- * DELETE /v1/sandboxes/{id}/env/{key} — unset one
+ * GET    /v1/sandboxes/{id}/env       — list all → { env: {...} }
+ * GET    /v1/sandboxes/{id}/env/{key} — get one  → { value }
+ * PUT    /v1/sandboxes/{id}/env/{key} — set one  (body { value }) → { env }
+ * DELETE /v1/sandboxes/{id}/env/{key} — unset one → { env }
  *
- * Note: these endpoints are planned but not yet in the current backend router.
- * They will 404 until the server implements them.
+ * 热更新语义:改 env 只更新持久化值,不重启已运行进程;
+ * 下次 Start/spawn 的进程才读到新值。
  */
 
 import type { Client } from "./client.js";
@@ -28,7 +28,7 @@ export class Env {
       const res = await this.client.get(
         `/v1/sandboxes/${this.sandboxId}/env/${encodeURIComponent(key)}`,
       );
-      const data = res.json<{ key: string; value: string }>();
+      const data = res.json<{ value: string }>();
       return data.value;
     } catch (err: unknown) {
       if (err instanceof NotFoundError) return undefined;
@@ -37,12 +37,13 @@ export class Env {
   }
 
   /**
-   * Set an environment variable (affects future processes, not running ones).
+   * Set an environment variable. key 在 path,body 只含 value。
+   * 仅影响后续启动的进程,不影响已运行的进程。
    */
   async set(key: string, value: string): Promise<void> {
     await this.client.put(
       `/v1/sandboxes/${this.sandboxId}/env/${encodeURIComponent(key)}`,
-      { json: { key, value } },
+      { json: { value } },
     );
   }
 
@@ -56,9 +57,7 @@ export class Env {
   }
 
   /**
-   * 删除一个环境变量（DELETE .../env/{key}）。
-   * 注意：后端 router 目前没有 /env 路由，与 get/set/all 同属前瞻实现，
-   * 在服务端实现该端点前调用会返回 404。
+   * 删除一个环境变量(DELETE .../env/{key})。
    */
   async unset(key: string): Promise<void> {
     await this.client.delete(

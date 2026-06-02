@@ -31,7 +31,7 @@ function makeResponse(body: unknown, status = 200) {
 describe("Env.get", () => {
   it("returns value for existing key", async () => {
     const client = mockClient({
-      get: vi.fn().mockResolvedValue(makeResponse({ key: "NODE_ENV", value: "development" })),
+      get: vi.fn().mockResolvedValue(makeResponse({ value: "development" })),
     });
     const env = new Env("sb_1", client);
     expect(await env.get("NODE_ENV")).toBe("development");
@@ -46,7 +46,7 @@ describe("Env.get", () => {
   });
 
   it("URL-encodes key with special chars", async () => {
-    const getFn = vi.fn().mockResolvedValue(makeResponse({ key: "MY_VAR", value: "x" }));
+    const getFn = vi.fn().mockResolvedValue(makeResponse({ value: "x" }));
     const client = mockClient({ get: getFn });
     const env = new Env("sb_1", client);
     await env.get("MY VAR");
@@ -55,14 +55,14 @@ describe("Env.get", () => {
 });
 
 describe("Env.set", () => {
-  it("calls PUT with key+value body", async () => {
+  it("calls PUT with value-only body (key in path)", async () => {
     const putFn = vi.fn().mockResolvedValue({ status: 204 });
     const client = mockClient({ put: putFn });
     const env = new Env("sb_1", client);
     await env.set("API_KEY", "sk-abc");
     expect(putFn).toHaveBeenCalledWith(
       "/v1/sandboxes/sb_1/env/API_KEY",
-      { json: { key: "API_KEY", value: "sk-abc" } },
+      { json: { value: "sk-abc" } },
     );
   });
 });
