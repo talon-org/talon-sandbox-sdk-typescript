@@ -21,7 +21,7 @@ import { Sandbox } from "talon-sandbox";
 // configure({ server: "https://api.example.com", apiKey: "ask_..." });
 
 const sb = await Sandbox.create({
-  image: "node:20-bookworm",
+  image: "talon-alpine",
   resources: { cpu: 2, memory: "4GiB", disk: "10GiB" },
   network: "allowlist",
   env: { NODE_ENV: "development" },
@@ -124,7 +124,7 @@ import {
 } from "talon-sandbox";
 
 try {
-  const sb = await Sandbox.create({ image: "node:20-bookworm" });
+  const sb = await Sandbox.create({ image: "talon-alpine" });
 } catch (err) {
   if (err instanceof QuotaError) {
     console.log("quota exceeded");

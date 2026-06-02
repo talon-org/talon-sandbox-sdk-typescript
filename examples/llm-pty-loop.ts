@@ -17,7 +17,7 @@ import { Sandbox } from "../src/index.js";
 
 // Use `await using` for auto-cleanup on block exit (TS 5.2+)
 await using sb = await Sandbox.create({
-  image: "node:20-bookworm",
+  image: "talon-alpine",
   resources: { memory: "1GiB" },
   ttl: "10m",
 });

@@ -16,7 +16,7 @@ import { Sandbox } from "../src/index.js";
 import { NotImplementedError } from "../src/index.js";
 
 await using sb = await Sandbox.create({
-  image: "node:20-bookworm",
+  image: "talon-alpine",
   resources: { cpu: 2, memory: "2GiB" },
   network: "open",
   ttl: "2h",

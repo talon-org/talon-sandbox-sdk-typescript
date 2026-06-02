@@ -13,7 +13,7 @@
 import { Sandbox } from "../src/index.js";
 
 const sb = await Sandbox.create({
-  image: "node:20-bookworm",
+  image: "talon-alpine",
   resources: { cpu: 2, memory: "4GiB", disk: "10GiB" },
   network: "allowlist",
   env: { NODE_ENV: "development" },

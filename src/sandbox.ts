@@ -5,7 +5,7 @@
  * import { Sandbox } from "talon-sandbox";
  *
  * const sb = await Sandbox.create({
- *   image: "node:20-bookworm",
+ *   image: "talon-alpine",
  *   resources: { cpu: 2, memory: "4GiB" },
  *   network: "allowlist",
  *   timeout: "30m",
@@ -15,7 +15,7 @@
  * await sb.kill();
  *
  * // Auto-cleanup:
- * await using sb2 = await Sandbox.create({ image: "node:20-bookworm" });
+ * await using sb2 = await Sandbox.create({ image: "talon-alpine" });
  */
 
 import { Client, type ClientOptions } from "./client.js";
@@ -61,7 +61,7 @@ export interface ResourceOptions {
 }
 
 export interface SandboxCreateOptions {
-  /** Base image reference, e.g. "node:20-bookworm". */
+  /** Base image reference, e.g. "talon-alpine". */
   image?: string;
   /** Resource allocation. */
   resources?: ResourceOptions;
@@ -205,7 +205,7 @@ export class Sandbox {
    *
    * @example
    * const sb = await Sandbox.create({
-   *   image: "node:20-bookworm",
+   *   image: "talon-alpine",
    *   resources: { cpu: 2, memory: "4GiB", disk: "10GiB" },
    *   network: "allowlist",
    *   env: { NODE_ENV: "development" },
