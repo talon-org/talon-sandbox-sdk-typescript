@@ -8,6 +8,7 @@
  */
 
 import { mapHttpError, NetworkError } from "./errors.js";
+import { clientIdentityHeaders } from "./version.js";
 
 /** 官方托管端点。配置 API key 后即可直接使用，无需显式指定 server。
  * 自部署场景可通过 TALON_SANDBOX_SERVER 环境变量或 ClientOptions.server 参数覆盖。 */
@@ -101,6 +102,10 @@ export class Client {
 
     const headers: Record<string, string> = {
       Accept: "application/json, application/octet-stream, text/plain",
+      // 规范客户端标识:Node 设 User-Agent=talon-sandbox-typescript/<version>,
+      // 浏览器(fetch 禁设 User-Agent)兜底 X-Talon-Client=sdk-typescript。
+      // 供后端 createSandbox 来源归因(created_from)。
+      ...clientIdentityHeaders(),
       ...opts.headers,
     };
 

@@ -95,4 +95,6 @@ export {
 // ── Utilities ─────────────────────────────────────────────────────────────────
 export { parseSize, parseDuration } from "./parse.js";
 
-export const VERSION = "0.1.0";
+// 版本号不再硬编码:由 src/version.ts 从 package.json(构建时注入)动态取,
+// 发版改 package.json 即自动跟随。同处也定义了规范 User-Agent。
+export { VERSION, USER_AGENT } from "./version.js";

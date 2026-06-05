@@ -17,6 +17,7 @@
 
 import { EventEmitter } from "./event-emitter.js";
 import { NetworkError, SandboxError } from "./errors.js";
+import { USER_AGENT } from "./version.js";
 import type { Client } from "./client.js";
 
 type PtyEventMap = {
@@ -259,7 +260,11 @@ async function openWebSocket(
     u: string,
     opts?: { headers?: Record<string, string> },
   ) => WsLike;
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {
+    // Node `ws` 支持注入握手头:带上规范 User-Agent,与 HTTP 出口口径一致。
+    // (浏览器/Node 22+ 原生 WebSocket 不支持设头,且浏览器禁设 User-Agent,故仅此分支处理。)
+    "User-Agent": USER_AGENT,
+  };
   if (authHeader) headers["Authorization"] = authHeader;
   return await new Promise<WsLike>((resolve, reject) => {
     const ws = new NodeWS(url, { headers });
