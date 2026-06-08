@@ -281,19 +281,36 @@ export class Sandbox {
   }
 
   /**
-   * List sandboxes, optionally filtered by labels (client-side).
+   * 列出沙箱，支持服务端 label 过滤（同时保留客户端兜底过滤）。
+   *
+   * 当 opts.labels 非空时，将每个 (key, value) 拼成 `label=key:value`
+   * query 参数发给后端（AND 语义，重复 key）。后端不支持时客户端过滤兜底。
    *
    * @example
    * const sbs = await Sandbox.list({ labels: { project: "agent-x" } });
    */
   static async list(opts: ListOptions = {}): Promise<Sandbox[]> {
     const client = opts.client ?? getDefaultClient();
-    const res = await client.get("/v1/sandboxes");
+
+    // 构建请求路径：labels 非空时把每对 key:value 作为重复 label 参数追加到 URL。
+    // 使用 URLSearchParams.append 保证同名 key 被重复序列化（而非覆盖）。
+    let path = "/v1/sandboxes";
+    if (opts.labels && Object.keys(opts.labels).length > 0) {
+      const qs = new URLSearchParams();
+      for (const [k, v] of Object.entries(opts.labels)) {
+        // 用冒号分隔 key 与 value（后端约定，value 可能含等号）。
+        qs.append("label", `${k}:${v}`);
+      }
+      path = `${path}?${qs.toString()}`;
+    }
+
+    const res = await client.get(path);
     const data = res.json<{ sandboxes: RawSandbox[] }>();
     const all = (data.sandboxes ?? []).map(
       (r) => new Sandbox(sandboxInfoFromRaw(r), client),
     );
 
+    // 客户端过滤保留：老版本服务端不支持 label 参数时作为双保险。
     if (opts.labels && Object.keys(opts.labels).length > 0) {
       return all.filter((sb) => {
         for (const [k, v] of Object.entries(opts.labels!)) {

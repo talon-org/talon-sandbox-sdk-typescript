@@ -189,6 +189,56 @@ describe("Sandbox.list", () => {
     expect(sbs).toHaveLength(1);
     expect(sbs[0]!.id).toBe("sb_1");
   });
+
+  it("将 labels 拼成 label=key:value 重复参数追加到 GET URL（服务端过滤）", async () => {
+    // 服务端只返回已过滤结果，验证 GET 请求携带了正确的 query 参数
+    const client = mockClient({
+      get: vi.fn().mockResolvedValue(
+        makeResponse({
+          sandboxes: [
+            { ...rawSandbox, id: "sb_1", labels: { project: "agent-x", env: "prod" } },
+          ],
+        }),
+      ),
+    });
+    setDefaultClient(client);
+    const sbs = await Sandbox.list({ labels: { project: "agent-x", env: "prod" } });
+
+    // 验证 GET 请求路径包含两个 label 参数
+    const getCall = (client.get as ReturnType<typeof vi.fn>).mock.calls[0] as [string];
+    const calledPath = getCall[0]!;
+    expect(calledPath).toContain("label=project%3Aagent-x");
+    expect(calledPath).toContain("label=env%3Aprod");
+
+    // 客户端兜底过滤仍然生效
+    expect(sbs).toHaveLength(1);
+    expect(sbs[0]!.id).toBe("sb_1");
+  });
+
+  it("labels 为空时不追加 query 参数", async () => {
+    const client = mockClient();
+    setDefaultClient(client);
+    await Sandbox.list();
+    const getCall = (client.get as ReturnType<typeof vi.fn>).mock.calls[0] as [string];
+    expect(getCall[0]).toBe("/v1/sandboxes");
+  });
+
+  it("单个 label 含等号的 value 不被截断（冒号分隔而非等号）", async () => {
+    const client = mockClient({
+      get: vi.fn().mockResolvedValue(
+        makeResponse({
+          sandboxes: [
+            { ...rawSandbox, id: "sb_eq", labels: { token: "a=b=c" } },
+          ],
+        }),
+      ),
+    });
+    setDefaultClient(client);
+    await Sandbox.list({ labels: { token: "a=b=c" } });
+    const getCall = (client.get as ReturnType<typeof vi.fn>).mock.calls[0] as [string];
+    // value 中的等号被 URLSearchParams 编码，key:value 用冒号分隔
+    expect(getCall[0]).toContain("label=token%3Aa%3Db%3Dc");
+  });
 });
 
 describe("Sandbox lifecycle", () => {
